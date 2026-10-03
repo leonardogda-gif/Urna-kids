@@ -160,6 +160,7 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
   <div id="adminPanel" style="display:none">
     <div class="toolbar">
       <button class="btn green" id="toggleElection"></button>
+      <button class="btn dark" id="logoutBtn">🔒 Sair</button>
       <button class="btn light" id="renameElection">✏️ Nome da votação</button>
       <button class="btn light" id="soundBtn">🔊 Som ligado</button>
       <button class="btn light" id="changePin">Alterar PIN</button>
@@ -293,6 +294,7 @@ function canVote(){return db.open && (!db.requireRelease||released) && currentCa
 function nav(view){
  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===view));
  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
+ if(view==='vote'&&admin)lockAdmin();
  if(view==='vote')renderVote(); if(view==='admin')renderAdmin(); if(view==='results')renderResults();
 }
 document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>nav(b.dataset.view));
@@ -456,8 +458,15 @@ function mesarioMode(target){
 }
 
 /* ---------- Administração ---------- */
+let adminTimer=null;
+function lockAdmin(){admin=false;clearTimeout(adminTimer);renderAdmin();renderResults()}
+function touchAdmin(){if(!admin)return;clearTimeout(adminTimer);adminTimer=setTimeout(()=>{if(admin){lockAdmin();}},5*60*1000)}
+['click','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,touchAdmin,{passive:true}));
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&admin)lockAdmin()});
+document.getElementById('logoutBtn').onclick=()=>{lockAdmin();nav('vote')};
+document.getElementById('pinInput').onkeydown=e=>{if(e.key==='Enter')document.getElementById('loginBtn').click()};
 document.getElementById('loginBtn').onclick=()=>{
- if(document.getElementById('pinInput').value===db.pin){admin=true;document.getElementById('pinInput').value='';renderAdmin();renderResults()}else alert('PIN incorreto.');
+ if(document.getElementById('pinInput').value===db.pin){admin=true;touchAdmin();document.getElementById('pinInput').value='';renderAdmin();renderResults()}else alert('PIN incorreto.');
 };
 function renderAdmin(){
  document.getElementById('adminLocked').style.display=admin?'none':'block';
