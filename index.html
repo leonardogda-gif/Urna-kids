@@ -84,6 +84,36 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
 .mCount{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mCount div{background:#2d3531;border-radius:14px;padding:12px;text-align:center}.mCount b{display:block;font-size:28px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:30;padding:16px}.modal.show{display:grid}.modalbox{width:min(430px,100%);background:white;border-radius:18px;padding:20px}
 @media(max-width:760px){.urna{padding:12px}.urna-body,.grid{grid-template-columns:1fr}.screen{min-height:330px;padding:14px}.keypad{padding:12px}.key{padding:11px}.wrap{margin-top:14px}.barrow{grid-template-columns:120px 1fr 60px}.kpis{grid-template-columns:1fr}.qtitle{font-size:21px}}
+
+/* Celular deitado */
+@media (orientation:landscape) and (max-height:540px){
+ .top{min-height:0;padding:3px max(10px,env(safe-area-inset-right,0px)) 3px max(10px,env(safe-area-inset-left,0px))}
+ .nav button{padding:4px 9px}
+ .wrap{margin:6px auto 0;padding:0 max(8px,env(safe-area-inset-left,0px)) 10px;max-width:none}
+ #vote .urna{max-width:none;height:calc(100dvh - 40px);padding:8px;border-radius:16px;display:flex;flex-direction:column}
+ #vote .urna-body{grid-template-columns:1fr minmax(210px,30%);gap:10px;flex:1;min-height:0}
+ .screen{min-height:0;height:100%;padding:8px 14px;border-width:5px;display:flex;flex-direction:column}
+ .screen .cat{font-size:11px}
+ .qtitle{font-size:20px;margin:2px 0 8px}
+ .opts{display:flex;gap:8px;flex:1;min-height:0;margin-bottom:8px}
+ .opt{flex:1 1 0;min-width:0;display:flex;flex-direction:column;padding:6px 5px 7px}
+ .opt img,.opt .noimg{flex:1 1 0;min-height:0;height:0;width:100%;aspect-ratio:auto;object-fit:contain;background:transparent}
+ .opt .oname{font-size:13px;margin-top:4px}
+ .pickrow{padding-top:8px;gap:10px}
+ .digit{width:40px;height:48px;font-size:28px}
+ .pickname{font-size:19px}
+ .blankMsg,.nullMsg{font-size:19px}
+ .lockScreen{padding:14px 10px 6px;margin:auto}.lockScreen .big{font-size:46px}.lockScreen h2{font-size:22px;margin:8px 0 4px}.linkPin{margin-top:12px}
+ .endScreen{padding:20px 10px;margin:auto}.endScreen h1{font-size:52px}
+ .screen .empty{margin:auto;padding:10px}
+ .keypad{padding:10px;justify-content:stretch;min-height:0}
+ .keys{flex:1;grid-auto-rows:1fr;min-height:0}
+ .keys{gap:6px}.key{padding:4px 2px;font-size:19px;min-height:0}
+ .actions{margin-top:8px;gap:5px}.actions button{min-height:38px;padding:6px 3px;font-size:10px}.confirm{min-height:46px!important}
+ #vote .status{margin-top:6px}.pill{padding:3px 9px;font-size:11px}
+ .footer{display:none}
+}
+.fsBtn{border:0;cursor:pointer}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -189,26 +219,35 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
 
 <script>
 const KEY='urna_kids_v1';
+const UNICORN='data:image/svg+xml;utf8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20600%20600%22%20width%3D%22600%22%20height%3D%22600%22%3E%3Cdefs%3E%20%3ClinearGradient%20id%3D%22bg%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23e9e3ff%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23ffd9ef%22/%3E%3C/linearGradient%3E%20%3ClinearGradient%20id%3D%22scoop%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%238fd3ff%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%234aa8f0%22/%3E%3C/linearGradient%3E%20%3ClinearGradient%20id%3D%22horn%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%220%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23ffd76a%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f2a93b%22/%3E%3C/linearGradient%3E%20%3ClinearGradient%20id%3D%22cone%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f4c27a%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23d9934a%22/%3E%3C/linearGradient%3E%20%3CclipPath%20id%3D%22cc%22%3E%3Cpath%20d%3D%22M200%20360%20L400%20360%20L300%20560%20Z%22/%3E%3C/clipPath%3E%3C/defs%3E%3Crect%20width%3D%22600%22%20height%3D%22600%22%20rx%3D%2270%22%20fill%3D%22url%28%23bg%29%22/%3E%3C%21--%20estrelinhas%20--%3E%3Cg%20fill%3D%22%23fff%22%3E%20%3Cpath%20d%3D%22M90%20120%20l10%2022%2022%2010%20-22%2010%20-10%2022%20-10%20-22%20-22%20-10%2022%20-10z%22/%3E%20%3Cpath%20d%3D%22M500%20170%20l7%2015%2015%207%20-15%207%20-7%2015%20-7%20-15%20-15%20-7%2015%20-7z%22/%3E%20%3Cpath%20d%3D%22M480%20470%20l8%2017%2017%208%20-17%208%20-8%2017%20-8%20-17%20-17%20-8%2017%20-8z%22/%3E%20%3Ccircle%20cx%3D%22120%22%20cy%3D%22420%22%20r%3D%227%22/%3E%3Ccircle%20cx%3D%22530%22%20cy%3D%22320%22%20r%3D%226%22/%3E%3Ccircle%20cx%3D%22150%22%20cy%3D%22260%22%20r%3D%225%22/%3E%3C/g%3E%3C%21--%20casquinha%20--%3E%3Cpath%20d%3D%22M200%20360%20L400%20360%20L300%20560%20Z%22%20fill%3D%22url%28%23cone%29%22/%3E%3Cg%20clip-path%3D%22url%28%23cc%29%22%20stroke%3D%22%23b9773a%22%20stroke-width%3D%225%22%20opacity%3D%22.7%22%3E%20%3Cpath%20d%3D%22M150%20360%20L370%20600%20M210%20360%20L430%20600%20M270%20360%20L490%20600%20M330%20360%20L550%20600%20M90%20360%20L310%20600%22/%3E%20%3Cpath%20d%3D%22M450%20360%20L230%20600%20M390%20360%20L170%20600%20M330%20360%20L110%20600%20M510%20360%20L290%20600%20M270%20360%20L50%20600%22/%3E%3C/g%3E%3C%21--%20bola%20de%20baixo%20com%20escorrido%20--%3E%3Cpath%20d%3D%22M175%20365%20C160%20300%20200%20255%20255%20260%20C280%20225%20340%20225%20360%20262%20C415%20255%20445%20305%20425%20365%20C420%20385%20405%20380%20400%20370%20C395%20395%20375%20400%20370%20375%20C360%20405%20335%20405%20330%20378%20C315%20400%20290%20398%20285%20375%20C270%20395%20245%20398%20240%20372%20C230%20392%20205%20395%20205%20370%20C195%20388%20178%20385%20175%20365%20Z%22%20fill%3D%22url%28%23scoop%29%22/%3E%3C%21--%20bola%20de%20cima%20--%3E%3Ccircle%20cx%3D%22300%22%20cy%3D%22235%22%20r%3D%2298%22%20fill%3D%22url%28%23scoop%29%22/%3E%3Cellipse%20cx%3D%22262%22%20cy%3D%22190%22%20rx%3D%2230%22%20ry%3D%2218%22%20fill%3D%22%23fff%22%20opacity%3D%22.45%22%20transform%3D%22rotate%28-25%20262%20190%29%22/%3E%3C%21--%20orelhinhas%20--%3E%3Cpath%20d%3D%22M222%20172%20L210%20112%20L262%20150%20Z%22%20fill%3D%22%237cc6fb%22/%3E%3Cpath%20d%3D%22M226%20160%20L220%20128%20L248%20150%20Z%22%20fill%3D%22%23ffb3d9%22/%3E%3Cpath%20d%3D%22M378%20172%20L390%20112%20L338%20150%20Z%22%20fill%3D%22%237cc6fb%22/%3E%3Cpath%20d%3D%22M374%20160%20L380%20128%20L352%20150%20Z%22%20fill%3D%22%23ffb3d9%22/%3E%3C%21--%20crina%20colorida%20--%3E%3Cpath%20d%3D%22M262%20150%20C250%20120%20285%20108%20300%20128%20C310%20105%20350%20112%20338%20150%20C320%20140%20285%20140%20262%20150%20Z%22%20fill%3D%22%23c9a3ff%22/%3E%3Ccircle%20cx%3D%22250%22%20cy%3D%22152%22%20r%3D%2216%22%20fill%3D%22%23ff9ccf%22/%3E%3Ccircle%20cx%3D%22350%22%20cy%3D%22152%22%20r%3D%2216%22%20fill%3D%22%23ffe27a%22/%3E%3C%21--%20chifre%20--%3E%3Cpath%20d%3D%22M282%20140%20L300%2040%20L318%20140%20Z%22%20fill%3D%22url%28%23horn%29%22/%3E%3Cg%20stroke%3D%22%23e0902a%22%20stroke-width%3D%225%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M287%20118%20L314%20108%22/%3E%3Cpath%20d%3D%22M291%2092%20L311%2084%22/%3E%3Cpath%20d%3D%22M295%2066%20L306%2061%22/%3E%3C/g%3E%3C%21--%20rostinho%20--%3E%3Cg%20stroke%3D%22%232b3a67%22%20stroke-width%3D%227%22%20stroke-linecap%3D%22round%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M258%20240%20q14%2014%2028%200%22/%3E%3Cpath%20d%3D%22M314%20240%20q14%2014%2028%200%22/%3E%3Cpath%20d%3D%22M290%20270%20q10%209%2020%200%22/%3E%3C/g%3E%3Cellipse%20cx%3D%22248%22%20cy%3D%22268%22%20rx%3D%2215%22%20ry%3D%229%22%20fill%3D%22%23ff8cc6%22%20opacity%3D%22.6%22/%3E%3Cellipse%20cx%3D%22352%22%20cy%3D%22268%22%20rx%3D%2215%22%20ry%3D%229%22%20fill%3D%22%23ff8cc6%22%20opacity%3D%22.6%22/%3E%3C%21--%20confeitos%20--%3E%3Cg%20stroke-width%3D%228%22%20stroke-linecap%3D%22round%22%3E%20%3Cpath%20d%3D%22M215%20320%20l14%20-6%22%20stroke%3D%22%23ff7ab8%22/%3E%3Cpath%20d%3D%22M265%20340%20l10%2010%22%20stroke%3D%22%23ffe066%22/%3E%3Cpath%20d%3D%22M325%20330%20l14%204%22%20stroke%3D%22%23b78cff%22/%3E%20%3Cpath%20d%3D%22M380%20318%20l8%20-12%22%20stroke%3D%22%23ffffff%22/%3E%3Cpath%20d%3D%22M240%20205%20l12%20-6%22%20stroke%3D%22%23ff7ab8%22/%3E%3Cpath%20d%3D%22M355%20205%20l10%208%22%20stroke%3D%22%23ffe066%22/%3E%3Cpath%20d%3D%22M300%20300%20l0%200%22%20stroke%3D%22%23fff%22/%3E%3C/g%3E%3C/svg%3E';
 function art(emoji,bg){return 'data:image/svg+xml;utf8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="16" fill="${bg}"/><text x="60" y="66" font-size="66" text-anchor="middle" dominant-baseline="middle">${emoji}</text></svg>`)}
 function seed(){
  const q=[
   ['Brincadeiras do dia 11',[['Perguntas com prêmios','🏆','#ffe08a'],['Gincanas','🏃','#bfe3ff']]],
-  ['Sabor do sorvete',[['Creme','🍦','#fff3c4'],['Morango','🍓','#ffd0d8'],['Chocolate','🍫','#e6cdb4']]],
+  ['Sabor do sorvete',[['Creme','🍦','#fff3c4'],['Morango','🍓','#ffd0d8'],['Chocolate','🍫','#e6cdb4'],['Azul unicórnio',UNICORN,null]]],
   ['Em 2027 quero mais…',[['Jogos','🎲','#d9f2d0'],['Atividades manuais','✂️','#f6d9f2'],['Vídeos','📺','#d6e4ff']]]
  ];
  const categories=[],candidates=[];
  q.forEach(([name,opts],i)=>{const cid=id();categories.push({id:cid,name,digits:1,order:i+1});
-  opts.forEach(([n,e,bg],j)=>candidates.push({id:id(),categoryId:cid,name:n,number:String(j+1),photo:art(e,bg)}))});
+  opts.forEach(([n,e,bg],j)=>candidates.push({id:id(),categoryId:cid,name:n,number:String(j+1),photo:bg?art(e,bg):e}))});
  return {categories,candidates};
 }
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
-const defaults={pin:'1234',open:false,sound:true,requireRelease:true,urnaId:null,title:'Votação do Ministério Infantil',voters:0,categories:[],candidates:[],votes:[]};
+const defaults={seedV:2,pin:'1234',open:false,sound:true,requireRelease:true,urnaId:null,title:'Votação do Ministério Infantil',voters:0,categories:[],candidates:[],votes:[]};
 let db=load(), admin=false, session={idx:0,input:'',blank:false}, released=false, resultsRevealed=false, counting=false, revealIndex=-1;
 
 function load(){
  let d;try{d=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){d=null}
  if(!d){d={...structuredClone(defaults),...seed()};try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
  d={...defaults,...d};
+ if(!d.seedV||d.seedV<2){
+  const sc=(d.categories||[]).find(c=>c.name==='Sabor do sorvete');
+  if(sc&&!d.candidates.some(o=>o.categoryId===sc.id&&/unic/i.test(o.name))){
+   const n=d.candidates.filter(o=>o.categoryId===sc.id).length+1;
+   if(n<=9)d.candidates.push({id:id(),categoryId:sc.id,name:'Azul unicórnio',number:String(n),photo:UNICORN});
+  }
+  d.seedV=2;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}
+ }
  if(!d.urnaId){d.urnaId=newUrnaId();try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
  return d;
 }
@@ -265,6 +304,7 @@ function renderStatus(){
   const n=conns.size;
   h+=n?`<span class="pill open">📱 Mesário conectado</span>`:(peerState==='online'?'<span class="pill warn">📱 Nenhum mesário conectado</span>':'<span class="pill warn">📱 Sem conexão com a internet</span>');
  }
+ if(document.fullscreenEnabled&&!document.fullscreenElement)h+='<button class="pill fsBtn" onclick="goFullscreen()">⛶ Tela cheia (deitado)</button>';
  st.innerHTML=h;
  document.getElementById('topTitle').textContent=db.title;
 }
@@ -536,6 +576,14 @@ function startCounting(){
   if(p>=100){clearInterval(timer);msg.textContent='Apuração concluída.';finishSound();setTimeout(()=>{counting=false;resultsRevealed=false;revealIndex=-1;renderReveal()},900)}
  },280);
 }
+
+/* ---------- Tela cheia + deitado ---------- */
+window.goFullscreen=async()=>{
+ try{await document.documentElement.requestFullscreen({navigationUI:'hide'})}catch(e){}
+ try{await screen.orientation.lock('landscape')}catch(e){}
+ renderStatus();
+};
+document.addEventListener('fullscreenchange',()=>{renderStatus()});
 
 /* ---------- Tela sempre ligada ---------- */
 let wakeLock=null;
