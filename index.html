@@ -81,6 +81,14 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
 .mRelease:active{transform:translateY(2px)}
 .mRelease:disabled{background:#4a524e;color:#9aa49e;box-shadow:none}
 .mSec{border:1px solid #4a524e;background:transparent;color:#d6ddd9;border-radius:14px;padding:13px;font-weight:700;width:100%}
+.mRes{display:grid;gap:10px}.mResT{font-weight:800;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.mRc{background:#2d3531;border-radius:14px;padding:12px 14px}
+.mRc h3{margin:0 0 2px;font-size:17px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.mRc .sm{color:#9aa49e;font-size:12px}
+.tag{font-size:11px;font-weight:800;padding:2px 8px;border-radius:999px;background:#3a423e;color:#c8d0cb;white-space:nowrap}.tag.on{background:#e3b52b;color:#3a2c00}.tag.ok{background:#245a37;color:#bff0cf}
+.mRow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin-top:8px;font-size:14px}
+.mRow .bar{grid-column:1/-1;height:8px;background:#3a423e;border-radius:9px;overflow:hidden}.mRow .bar i{display:block;height:100%;background:#7fc79a;border-radius:9px}
+.mRow.win b{color:#ffd76a}.mRow.win .bar i{background:#e3b52b}
 .mAdmin{display:grid;gap:10px;margin-top:6px;border-top:1px solid #3c4541;padding-top:16px}
 .mAdminT{font-weight:800;font-size:15px}.mAdminT span{font-weight:500;color:#9aa49e;font-size:12px}
 .mBtn{border:0;border-radius:14px;padding:16px;font-weight:800;font-size:17px;background:#c9342f;color:#fff;width:100%}
@@ -219,6 +227,7 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
   <button class="mRelease" id="mRelease" disabled>LIBERAR URNA</button>
   <div class="mCount"><div><b id="mVoters">0</b><span class="small" style="color:#b9c3bd">crianças votaram</span></div><div><b id="mQuestions">–</b><span class="small" style="color:#b9c3bd">perguntas</span></div></div>
   <button class="mSec" id="mCancel" disabled>Cancelar eleitor atual</button>
+  <div id="mResults"></div>
   <div class="mAdmin">
    <div class="mAdminT">⚙️ Administração <span>(pede o PIN uma vez)</span></div>
    <button class="mBtn" id="mToggle" disabled>Abrir votação</button>
@@ -384,7 +393,12 @@ function urnaStatus(){
  return 'voting';
 }
 function apurStage(){return counting?'counting':resultsRevealed?'done':revealReady?'reveal':'none'}
-function stateMsg(){return {t:'state',status:urnaStatus(),open:db.open,voters:db.voters||0,votes:db.votes.length,questions:cats().length,q:session.idx+1,title:db.title,apur:apurStage(),ri:revealIndex,view:currentView,canOpen:!!canOpen()}}
+function resultsData(){
+ return cats().map(c=>{const vv=db.votes.filter(v=>v.categoryId===c.id),valid=vv.filter(v=>v.type==='valid').length;
+  return {name:c.name,total:vv.length,blank:vv.filter(v=>v.type==='blank').length,
+   rows:optsOf(c.id).map(o=>({num:o.number,name:o.name,n:vv.filter(v=>v.candidateId===o.id).length})).map(r=>({...r,pct:valid?Math.round(r.n/valid*100):0})).sort((a,b)=>b.n-a.n)}});
+}
+function stateMsg(){const st=apurStage();return {t:'state',results:(st==='reveal'||st==='done')?resultsData():null,status:urnaStatus(),open:db.open,voters:db.voters||0,votes:db.votes.length,questions:cats().length,q:session.idx+1,title:db.title,apur:apurStage(),ri:revealIndex,view:currentView,canOpen:!!canOpen()}}
 function adminCmd(c,m){
  if(String(m.pin)!==String(db.pin)){c.send({t:'adminErr'});return}
  c.send({t:'adminOk'});
@@ -480,6 +494,16 @@ function mesarioMode(target){
   const nx=$('mNext');nx.disabled=state.apur!=='reveal';
   nx.textContent=state.ri<0?'🏆 Revelar primeira pergunta':(state.ri>=state.questions-1?'🏆 Ver resultado completo':'🏆 Revelar próxima pergunta');
   $('mBack').disabled=state.view==='vote';
+  const box=$('mResults');
+  if(!state.results){box.innerHTML='';}
+  else{
+   const ri=state.apur==='done'?state.questions:state.ri;
+   box.innerHTML=`<div class="mRes"><div class="mResT">📊 Apuração <span class="sm">${state.voters} crianças</span></div>`+state.results.map((q,i)=>{
+    const tag=i<ri?'<span class="tag ok">revelada</span>':(i===ri&&state.view==='results'?'<span class="tag on">na tela agora</span>':'<span class="tag">ainda não revelada</span>');
+    const top=q.rows.length?q.rows[0].n:0;
+    return `<div class="mRc"><h3><span>${esc(q.name)}</span>${tag}</h3><div class="sm">${q.total} resposta(s) · ${q.blank} em branco</div>`+q.rows.map(r=>`<div class="mRow ${top&&r.n===top?'win':''}"><b>${top&&r.n===top?'🏆 ':''}${esc(r.num)} · ${esc(r.name)}</b><span>${r.n} · ${r.pct}%</span><div class="bar"><i style="width:${r.pct}%"></i></div></div>`).join('')+'</div>';
+   }).join('')+'</div>';
+  }
  }
  function connect(){
   clearTimeout(tmr);
