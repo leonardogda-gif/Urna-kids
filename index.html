@@ -81,6 +81,11 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
 .mRelease:active{transform:translateY(2px)}
 .mRelease:disabled{background:#4a524e;color:#9aa49e;box-shadow:none}
 .mSec{border:1px solid #4a524e;background:transparent;color:#d6ddd9;border-radius:14px;padding:13px;font-weight:700;width:100%}
+.mAdmin{display:grid;gap:10px;margin-top:6px;border-top:1px solid #3c4541;padding-top:16px}
+.mAdminT{font-weight:800;font-size:15px}.mAdminT span{font-weight:500;color:#9aa49e;font-size:12px}
+.mBtn{border:0;border-radius:14px;padding:16px;font-weight:800;font-size:17px;background:#c9342f;color:#fff;width:100%}
+.mBtn.open{background:#12823b}.mBtn.gold{background:#e3b52b;color:#3a2c00}.mBtn.green{background:#1e62a5}
+.mBtn:disabled{background:#3a423e;color:#7f8984}
 .mCount{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mCount div{background:#2d3531;border-radius:14px;padding:12px;text-align:center}.mCount b{display:block;font-size:28px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:30;padding:16px}.modal.show{display:grid}.modalbox{width:min(430px,100%);background:white;border-radius:18px;padding:20px}
 @media(max-width:760px){.urna{padding:12px}.urna-body,.grid{grid-template-columns:1fr}.screen{min-height:330px;padding:14px}.keypad{padding:12px}.key{padding:11px}.wrap{margin-top:14px}.barrow{grid-template-columns:120px 1fr 60px}.kpis{grid-template-columns:1fr}.qtitle{font-size:21px}}
@@ -214,6 +219,13 @@ body.mesarioMode .top,body.mesarioMode .wrap,body.mesarioMode .footer{display:no
   <button class="mRelease" id="mRelease" disabled>LIBERAR URNA</button>
   <div class="mCount"><div><b id="mVoters">0</b><span class="small" style="color:#b9c3bd">crianças votaram</span></div><div><b id="mQuestions">–</b><span class="small" style="color:#b9c3bd">perguntas</span></div></div>
   <button class="mSec" id="mCancel" disabled>Cancelar eleitor atual</button>
+  <div class="mAdmin">
+   <div class="mAdminT">⚙️ Administração <span>(pede o PIN uma vez)</span></div>
+   <button class="mBtn" id="mToggle" disabled>Abrir votação</button>
+   <button class="mBtn gold" id="mCount" disabled>📊 Iniciar apuração</button>
+   <button class="mBtn green" id="mNext" disabled>Revelar próxima pergunta</button>
+   <button class="mSec" id="mBack" disabled>Voltar a urna para a tela de votação</button>
+  </div>
 </section>
 
 <div class="footer">Votação interna do ministério infantil. Não é software eleitoral oficial.</div>
@@ -235,6 +247,7 @@ function seed(){
 }
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 const defaults={seedV:2,pin:'1234',open:false,sound:true,requireRelease:true,urnaId:null,title:'Votação do Ministério Infantil',voters:0,categories:[],candidates:[],votes:[]};
+let revealReady=false, currentView='vote';
 let db=load(), admin=false, session={idx:0,input:'',blank:false}, released=false, resultsRevealed=false, counting=false, revealIndex=-1;
 
 function load(){
@@ -294,6 +307,7 @@ function canVote(){return db.open && (!db.requireRelease||released) && currentCa
 function nav(view){
  document.querySelectorAll('.view').forEach(x=>x.classList.toggle('active',x.id===view));
  document.querySelectorAll('.nav button').forEach(x=>x.classList.toggle('active',x.dataset.view===view));
+ currentView=view;
  if(view==='vote'&&admin)lockAdmin();
  if(view==='vote')renderVote(); if(view==='admin')renderAdmin(); if(view==='results')renderResults();
 }
@@ -369,7 +383,24 @@ function urnaStatus(){
  if(db.requireRelease&&!released)return 'locked';
  return 'voting';
 }
-function stateMsg(){return {t:'state',status:urnaStatus(),voters:db.voters||0,questions:cats().length,q:session.idx+1,title:db.title}}
+function apurStage(){return counting?'counting':resultsRevealed?'done':revealReady?'reveal':'none'}
+function stateMsg(){return {t:'state',status:urnaStatus(),open:db.open,voters:db.voters||0,votes:db.votes.length,questions:cats().length,q:session.idx+1,title:db.title,apur:apurStage(),ri:revealIndex,view:currentView,canOpen:!!canOpen()}}
+function adminCmd(c,m){
+ if(String(m.pin)!==String(db.pin)){c.send({t:'adminErr'});return}
+ c.send({t:'adminOk'});
+ const a=m.action;
+ if(a==='open'){if(!setOpen(true))c.send({t:'msg',text:'Cada pergunta precisa de pelo menos uma opção.'});else nav('vote')}
+ else if(a==='close'){setOpen(false)}
+ else if(a==='count'){
+  if(db.open){c.send({t:'msg',text:'Encerre a votação antes de apurar.'});return}
+  if(!db.votes.length){c.send({t:'msg',text:'Ainda não há votos.'});return}
+  if(admin)lockAdmin();
+  nav('results');if(!resultsRevealed&&!revealReady)startCounting();
+ }
+ else if(a==='next'){if(currentView!=='results')nav('results');revealNextStep()}
+ else if(a==='vote'){nav('vote')}
+ sendState();
+}
 function sendState(){conns.forEach(c=>{try{c.open&&c.send(stateMsg())}catch(e){}});if(typeof renderStatus==='function'&&document.getElementById('voteStatus'))renderStatus();}
 function scheduleRetry(ms=4000){clearTimeout(retryTimer);retryTimer=setTimeout(startPeer,ms)}
 function startPeer(){
@@ -380,7 +411,7 @@ function startPeer(){
  peer.on('open',()=>{peerState='online';sendState();refreshMesarioBox()});
  peer.on('connection',c=>{
   c.on('open',()=>{conns.add(c);c.send(stateMsg());sendState();refreshMesarioBox()});
-  c.on('data',m=>{if(!m||typeof m!=='object')return;if(m.t==='release')doRelease();else if(m.t==='cancel')doCancel();else if(m.t==='ping')c.send(stateMsg())});
+  c.on('data',m=>{if(!m||typeof m!=='object')return;if(m.t==='release')doRelease();else if(m.t==='cancel')doCancel();else if(m.t==='admin')adminCmd(c,m);else if(m.t==='ping')c.send(stateMsg())});
   const gone=()=>{conns.delete(c);sendState();refreshMesarioBox()};
   c.on('close',gone);c.on('error',gone);
  });
@@ -421,7 +452,14 @@ function mesarioMode(target){
  document.querySelector('meta[name=theme-color]').content='#202724';
  let mp=null, mc=null, last=0, state=null, tmr=null;
  const $=x=>document.getElementById(x);
- const setConn=on=>{$('mConn').innerHTML=`<span class="dot ${on?'on':''}"></span>${on?'Conectado':'Reconectando…'}`;if(!on){$('mRelease').disabled=true;$('mCancel').disabled=true}};
+ const setConn=on=>{$('mConn').innerHTML=`<span class="dot ${on?'on':''}"></span>${on?'Conectado':'Reconectando…'}`;if(!on){['mRelease','mCancel','mToggle','mCount','mNext','mBack'].forEach(x=>$(x).disabled=true)}};
+ let pinCache=sessionStorage.getItem('urnaPin')||'', pendingAdmin=null;
+ function adminSend(action,confirmText){
+  if(!(mc&&mc.open))return;
+  if(confirmText&&!confirm(confirmText))return;
+  if(!pinCache){const p=prompt('PIN do administrador da urna:');if(p===null)return;pinCache=p}
+  pendingAdmin=action;mc.send({t:'admin',action,pin:pinCache});navigator.vibrate?.(40);
+ }
  const show=(icon,h,p)=>{$('mState').innerHTML=`<div class="icon">${icon}</div><h2>${h}</h2><p>${p}</p>`};
  function render(){
   if(!state)return;
@@ -432,6 +470,16 @@ function mesarioMode(target){
   else if(state.status==='locked'){show('🔒','Urna aguardando','Chame a próxima criança e toque em liberar.');r.disabled=false;c.disabled=true}
   else if(state.status==='voting'){show('🗳️','Criança votando…',`Pergunta ${Math.min(state.q,state.questions)} de ${state.questions}`);r.disabled=true;c.disabled=false}
   else {show('✅','Voto concluído!','A urna volta a bloquear sozinha em instantes.');r.disabled=true;c.disabled=true}
+  if(state.apur==='counting')show('📊','Apurando…','A contagem está aparecendo na tela da urna.');
+  else if(state.apur==='reveal'&&state.view==='results')show('🏆','Revelando resultados',state.ri<0?'Toque em “Revelar” para mostrar a primeira pergunta.':`Pergunta ${state.ri+1} de ${state.questions} na tela.`);
+  else if(state.apur==='done'&&state.view==='results')show('🎉','Resultado completo na tela','Apuração finalizada.');
+  else if(state.status==='closed')show('⛔','Votação encerrada',state.votes?'Você já pode iniciar a apuração.':'Abra a votação aqui embaixo.');
+  const t=$('mToggle');t.disabled=false;t.textContent=state.open?'⏹ Encerrar votação':'▶ Abrir votação';t.className='mBtn'+(state.open?'':' open');
+  $('mCount').disabled=state.open||!state.votes||state.apur==='counting';
+  $('mCount').textContent=(state.apur==='reveal'||state.apur==='done')?'📊 Mostrar apuração na urna':'📊 Iniciar apuração';
+  const nx=$('mNext');nx.disabled=state.apur!=='reveal';
+  nx.textContent=state.ri<0?'🏆 Revelar primeira pergunta':(state.ri>=state.questions-1?'🏆 Ver resultado completo':'🏆 Revelar próxima pergunta');
+  $('mBack').disabled=state.view==='vote';
  }
  function connect(){
   clearTimeout(tmr);
@@ -445,12 +493,20 @@ function mesarioMode(target){
   try{mc&&mc.close()}catch(e){}
   mc=mp.connect(target,{reliable:true});
   mc.on('open',()=>{setConn(true);mc.send({t:'ping'})});
-  mc.on('data',m=>{if(m&&m.t==='state'){last=Date.now();state=m;setConn(true);render()}});
+  mc.on('data',m=>{if(!m)return;
+   if(m.t==='state'){last=Date.now();state=m;setConn(true);render()}
+   else if(m.t==='adminOk'){sessionStorage.setItem('urnaPin',pinCache)}
+   else if(m.t==='adminErr'){pinCache='';sessionStorage.removeItem('urnaPin');alert('PIN incorreto. Tente de novo.')}
+   else if(m.t==='msg'){alert(m.text)}});
   mc.on('close',()=>{setConn(false);tmr=setTimeout(connect,2000)});
   mc.on('error',()=>{setConn(false);tmr=setTimeout(connect,2500)});
  }
  if(typeof Peer==='undefined'){show('📵','Sem internet','Não foi possível carregar a conexão. Verifique a internet e recarregue.');return}
  $('mRelease').onclick=()=>{if(mc&&mc.open){mc.send({t:'release'});$('mRelease').disabled=true;navigator.vibrate?.(60)}};
+ $('mToggle').onclick=()=>{if(!state)return;state.open?adminSend('close','Encerrar a votação? As crianças não poderão mais votar.'):adminSend('open')};
+ $('mCount').onclick=()=>adminSend('count');
+ $('mNext').onclick=()=>adminSend('next');
+ $('mBack').onclick=()=>adminSend('vote');
  $('mCancel').onclick=()=>{if(mc&&mc.open&&confirm('Cancelar o eleitor atual? As respostas já confirmadas por ele continuam contando.'))mc.send({t:'cancel'})};
  setInterval(()=>{if(mc&&mc.open){try{mc.send({t:'ping'})}catch(e){}}if(last&&Date.now()-last>15000){last=0;setConn(false);connect()}},5000);
  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&(!mc||!mc.open))connect()});
@@ -510,10 +566,14 @@ document.getElementById('addCand').onclick=async()=>{
  document.getElementById('candName').value='';document.getElementById('candPhoto').value='';renderAdmin();
 };
 function fileToData(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{const max=420,k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.82))};img.onerror=()=>res(r.result);img.src=r.result};r.onerror=rej;r.readAsDataURL(f)})}
+function canOpen(){return db.categories.length&&!db.categories.some(c=>!optsOf(c.id).length)}
+function setOpen(v){
+ if(v&&!canOpen())return false;
+ db.open=v;released=false;resultsRevealed=false;counting=false;revealIndex=-1;revealReady=false;session={idx:0,input:'',blank:false};save();renderAdmin();renderVote();renderResults();return true;
+}
 document.getElementById('toggleElection').onclick=()=>{
  if(!admin)return;
- if(!db.open&&(!db.categories.length||db.categories.some(c=>!optsOf(c.id).length)))return alert('Cada pergunta precisa de pelo menos uma opção.');
- db.open=!db.open;released=false;resultsRevealed=false;counting=false;revealIndex=-1;session={idx:0,input:'',blank:false};save();renderAdmin();renderVote();renderResults();
+ if(!setOpen(!db.open))alert('Cada pergunta precisa de pelo menos uma opção.');
 };
 document.getElementById('requireRelease').onchange=e=>{db.requireRelease=e.target.checked;released=false;session={idx:0,input:'',blank:false};save();if(db.requireRelease)startPeer();else stopPeer();renderAdmin();renderVote()};
 document.getElementById('renameElection').onclick=()=>{const n=prompt('Nome da votação:',db.title);if(n&&n.trim()){db.title=n.trim();save();renderStatus()}};
@@ -542,6 +602,7 @@ function categoryResultMarkup(c){
  const r=rowsFor(c);
  return `<div class="result-card reveal"><div class="small">Resultado da pergunta</div><h2 style="font-size:30px;margin:5px 0 14px">${esc(c.name)}</h2><div class="small">${r.vv.length} resposta(s) · ${r.vv.filter(v=>v.type==='blank').length} em branco</div>${r.html}</div>`;
 }
+function revealNextStep(){if(!revealReady||resultsRevealed)return;revealIndex++;tone(760,.07,0,.04);renderReveal()}
 function renderReveal(){
  const out=document.getElementById('resultsContent'), controls=document.getElementById('countControls'), cs=cats();
  if(revealIndex<0){
@@ -551,8 +612,9 @@ function renderReveal(){
   out.innerHTML=categoryResultMarkup(cs[revealIndex]);
   const last=revealIndex===cs.length-1;
   controls.innerHTML=`<div style="text-align:center;margin:16px 0"><button class="btn green" id="revealNext">${last?'Ver resultado completo':'Revelar próxima pergunta'}</button></div>`;
- }else{resultsRevealed=true;controls.innerHTML='';out.innerHTML=resultMarkup();return}
- document.getElementById('revealNext').onclick=()=>{revealIndex++;tone(760,.07,0,.04);renderReveal()};
+ }else{resultsRevealed=true;controls.innerHTML='';out.innerHTML=resultMarkup();sendState();return}
+ document.getElementById('revealNext').onclick=revealNextStep;
+ sendState();
 }
 function renderResults(){
  const lock=document.getElementById('resultsLock'), controls=document.getElementById('countControls'), out=document.getElementById('resultsContent');
@@ -569,7 +631,7 @@ function renderResults(){
 }
 function startCounting(){
  if(counting||db.open||!db.votes.length)return;
- counting=true;revealIndex=-2;
+ counting=true;revealIndex=-2;revealReady=false;sendState();
  const controls=document.getElementById('countControls'),out=document.getElementById('resultsContent');
  controls.innerHTML='';
  out.innerHTML=`<div class="countStage"><div class="small">Apuração em andamento</div><div class="countTitle">Contando os votos</div><div class="countPct" id="countPct">0%</div><div class="progress"><div class="progressFill" id="progressFill"></div></div><div class="countMsg" id="countMsg">Preparando registros...</div></div>`;
@@ -582,7 +644,7 @@ function startCounting(){
   pct.textContent=p+'%';fill.style.width=p+'%';
   const next=Math.min(messages.length-1,Math.floor(p/18));
   if(next!==step){step=next;msg.textContent=messages[step];tone(480+step*55,.04,0,.025)}
-  if(p>=100){clearInterval(timer);msg.textContent='Apuração concluída.';finishSound();setTimeout(()=>{counting=false;resultsRevealed=false;revealIndex=-1;renderReveal()},900)}
+  if(p>=100){clearInterval(timer);msg.textContent='Apuração concluída.';finishSound();setTimeout(()=>{counting=false;resultsRevealed=false;revealIndex=-1;revealReady=true;renderReveal()},900)}
  },280);
 }
 
